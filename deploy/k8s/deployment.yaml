@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oikos-api
+  namespace: oikos
+  labels:
+    app: oikos-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oikos-api
+  template:
+    metadata:
+      labels:
+        app: oikos-api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/mnlx/oikos-api:main
+          imagePullPolicy: Always
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: oikos-scrapper-env
+                  key: DATABASE_URL
+            - name: CORS_ORIGINS
+              value: "https://oikos.netlsr.net"
+          ports:
+            - containerPort: 8000
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

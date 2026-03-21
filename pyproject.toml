@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oikos-api"
+version = "0.1.0"
+description = "Read API for Oikos real estate listings."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.116.1",
+  "uvicorn[standard]>=0.35.0",
+  "sqlalchemy>=2.0.43",
+  "psycopg[binary]>=3.2.9",
+  "pydantic-settings>=2.10.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
