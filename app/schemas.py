@@ -26,6 +26,8 @@ class ListingListItem(BaseModel):
     last_scraped_at: datetime
     source_code: str
     source_name: str
+    image_count: int
+    has_asset_links: bool
     raw_payload: dict[str, Any]
 
     model_config = ConfigDict(from_attributes=True)
@@ -39,12 +41,4 @@ class ListingDetail(ListingListItem):
     first_seen_at: datetime
     last_seen_at: datetime
     is_active: bool
-
-
-class SummaryResponse(BaseModel):
-    listing_count: int
-    active_listing_count: int
-    source_count: int
-    latest_scrape_started_at: datetime | None
-    latest_scrape_finished_at: datetime | None
-    latest_scrape_status: str | None
+    image_uris: list[str]

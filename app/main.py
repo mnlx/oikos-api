@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
-from app.models import Listing, ScrapeRun, Source
+from app.models import MartListing, ScrapeRun, Source
 from app.schemas import ListingDetail, ListingListItem, SummaryResponse
 
 
@@ -30,7 +30,7 @@ def to_float(value: Decimal | float | int | None) -> float | None:
     return float(value)
 
 
-def serialize_listing(listing: Listing) -> ListingDetail:
+def serialize_listing(listing: MartListing) -> ListingDetail:
     return ListingDetail(
         id=listing.id,
         title=listing.title,
@@ -58,14 +58,17 @@ def serialize_listing(listing: Listing) -> ListingDetail:
         last_seen_at=listing.last_seen_at,
         last_scraped_at=listing.last_scraped_at,
         is_active=listing.is_active,
-        source_code=listing.source.code,
-        source_name=listing.source.name,
+        source_code=listing.source_code,
+        source_name=listing.source_name,
+        image_uris=listing.image_uris or [],
+        image_count=listing.image_count or 0,
+        has_asset_links=listing.has_asset_links or False,
         raw_payload=listing.raw_payload or {},
     )
 
 
-def listing_query() -> Select[tuple[Listing]]:
-    return select(Listing).join(Listing.source).order_by(desc(Listing.last_scraped_at), desc(Listing.id))
+def listing_query() -> Select[tuple[MartListing]]:
+    return select(MartListing).order_by(desc(MartListing.last_scraped_at), desc(MartListing.id))
 
 
 @app.get("/health")
@@ -84,29 +87,29 @@ def get_listings(
 ) -> list[ListingListItem]:
     stmt = listing_query().limit(limit)
     if city:
-        stmt = stmt.where(Listing.city.ilike(city))
+        stmt = stmt.where(MartListing.city.ilike(city))
     if transaction_type:
-        stmt = stmt.where(Listing.transaction_type == transaction_type)
+        stmt = stmt.where(MartListing.transaction_type == transaction_type)
     if property_type:
-        stmt = stmt.where(Listing.property_type == property_type)
+        stmt = stmt.where(MartListing.property_type == property_type)
     if q:
         pattern = f"%{q}%"
         stmt = stmt.where(
             or_(
-                Listing.title.ilike(pattern),
-                Listing.neighborhood.ilike(pattern),
-                Listing.address.ilike(pattern),
-                Listing.description.ilike(pattern),
+                MartListing.title.ilike(pattern),
+                MartListing.neighborhood.ilike(pattern),
+                MartListing.address.ilike(pattern),
+                MartListing.description.ilike(pattern),
             )
         )
 
-    rows = db.scalars(stmt).unique().all()
+    rows = db.scalars(stmt).all()
     return [serialize_listing(listing) for listing in rows]
 
 
 @app.get("/api/listings/{listing_id}", response_model=ListingDetail)
 def get_listing(listing_id: int, db: Session = Depends(get_db)) -> ListingDetail:
-    listing = db.scalar(listing_query().where(Listing.id == listing_id))
+    listing = db.scalar(listing_query().where(MartListing.id == listing_id))
     if listing is None:
         raise HTTPException(status_code=404, detail="Listing not found")
     return serialize_listing(listing)
@@ -115,8 +118,10 @@ def get_listing(listing_id: int, db: Session = Depends(get_db)) -> ListingDetail
 @app.get("/api/summary", response_model=SummaryResponse)
 def get_summary(db: Session = Depends(get_db)) -> SummaryResponse:
     latest_run = db.scalar(select(ScrapeRun).order_by(desc(ScrapeRun.started_at)).limit(1))
-    listing_count = db.scalar(select(func.count()).select_from(Listing)) or 0
-    active_listing_count = db.scalar(select(func.count()).select_from(Listing).where(Listing.is_active.is_(True))) or 0
+    listing_count = db.scalar(select(func.count()).select_from(MartListing)) or 0
+    active_listing_count = (
+        db.scalar(select(func.count()).select_from(MartListing).where(MartListing.is_active.is_(True))) or 0
+    )
     source_count = db.scalar(select(func.count()).select_from(Source).where(Source.active.is_(True))) or 0
     return SummaryResponse(
         listing_count=listing_count,
