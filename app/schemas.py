@@ -42,3 +42,12 @@ class ListingDetail(ListingListItem):
     last_seen_at: datetime
     is_active: bool
     image_uris: list[str]
+
+
+class SummaryResponse(BaseModel):
+    listing_count: int
+    active_listing_count: int
+    source_count: int
+    latest_scrape_started_at: datetime | None
+    latest_scrape_finished_at: datetime | None
+    latest_scrape_status: str | None
