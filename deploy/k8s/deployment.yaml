@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/mnlx/oikos-api:sha-2749685a7d87
+          image: ghcr.io/mnlx/oikos-api:sha-f0357260806b
           imagePullPolicy: Always
           env:
             - name: DATABASE_URL
